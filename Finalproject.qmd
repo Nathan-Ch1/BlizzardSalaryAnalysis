@@ -1,0 +1,265 @@
+# Introduction {.unnumbered}
+
+In recent years, the technology and gaming industries have come under intense scrutiny regarding their internal corporate culture and compensation transparency. This project investigates the extent of wage disparity within Blizzard Entertainment, a major video game developer. Our analysis is prompted by a 2020 movement in which employees began anonymously sharing salary data to highlight perceived pay inequities across different departments and job levels. By analyzing this data, we aim to quantify how compensation varies within the company and identify potential financial vulnerabilities. This research is significant not only for Blizzard employees seeking equitable pay but also for industry regulators and labor advocates interested in corporate pay equity.
+
+## Dataset Description
+This analysis utilizes the 2020 Blizzard Entertainment Salary Dataset, which consists of over 400 anonymous entries provided by employees. The dataset includes variables such as current salary, job title, location, performance ratings, and percentage increases. These data are appropriate for our investigation as they provide an authentic perspective on internal compensation during a time of heightened labor advocacy. This enables us to identify pay disparities that are often hidden in official corporate reports.
+
+## Preprocessing
+To prepare the data for analysis, we performed several cleaning steps. First, we converted salary strings into numeric values and filtered out invalid entries (e.g., salaries under $500). Additionally, we standardized compensation by converting hourly wages into estimated annual salaries based on a 40-hour work week. This approach ensures an "apples-to-apples" comparison across the entire workforce.
+
+```{r}
+library(tidyverse)
+blizz <- read.csv("blizzard_salary.csv", stringsAsFactors = FALSE)
+
+# convert to numeric
+blizz$current_salary_num <- as.numeric(blizz$current_salary)
+
+# get rid of invalid salaries like $1 per year
+blizz_clean <- blizz %>%
+  filter(!(salary_type == "year" & current_salary_num < 500))
+
+# convert hourly to estimated annual salary
+blizz_clean <- blizz_clean %>%
+  mutate(annual_salary = ifelse(
+    salary_type == "hour",
+    current_salary_num *40 * 52,
+    current_salary_num
+  ))
+```
+
+## Methods
+We used a variety of statistical methods to explore wage differences:
+
+Exploratory Data Analysis (EDA): Creating histograms and boxplots to visualize distributions and identify outliers.
+
+Linear Regression: Used to measure the "salary premium" that full-time employees have compared to contract workers.
+
+K-Means Clustering: An unsupervised learning algorithm used to identify distinct income "tiers" or levels among the staff.
+
+Logistic Regression: To model the probability of "financial vulnerability" (earning below $75,000) based on employment variables.
+
+# Analysis of Salary Distribution
+
+The distribution of annual salaries at Blizzard Entertainment shows a right-skewed pattern. This means that most employees tend to have lower-to-middle salary brackets, while a smaller cohort of high earners extends the distribution's tail to the right. This polarization suggests that the mean salary may be disproportionately influenced by high-earning outliers, making the median a more representative measure of what a 'typical' employees earns. This observed disparity provides preliminary evidence supporting our research goal of quantifying wage inequality across the company.
+
+```{r}
+ggplot(blizz_clean, aes(x = annual_salary)) +
+  geom_histogram(bins = 20, col = "black", fill = "lightgreen") +
+  labs(title = "Distribution of Annual Salaries",
+       x = "Annual Salary",
+       y = "Count")
+```
+
+```{r}
+ggplot(blizz_clean, aes(x = performance_rating)) +
+  geom_bar (fill = "darkolivegreen") +
+  labs(title = "Distribution of Annual Salaries",
+       x = "Annual Salary",
+       y = "Count")
+```
+
+The distribution of performance ratings highlights a large number of employees fall into the 'Successful' category, indicating that this is the most common rating assigned within the company. Additionally, there is a significant proportion of entries labeled as 'NA.' This presents a limitation to our analysis, as it is unclear whether these represent missing data or a specific subset of employees not captured by the rating system. Understanding the implications of these 'NA' values is crucial for determining if our findings regarding performance-based compensation accurately represent the entire workforce.
+
+## Annual Salary by Employment Status
+
+```{r}
+ggplot(blizz_clean, aes(x = status, y = annual_salary)) +
+  geom_boxplot(fill = "pink") +
+  labs(title = "Annual Salary by Employment Status",
+       x = "Employment Status",
+       y = "Annual Salary")
+```
+
+The boxplot comparing annual salaries by employment status reveals that while the median salary for full-time employees is higher than that of contractors, there is a significant overlap in the interquartile ranges of both groups. Notably, the full-time employee category includes a high-salary outlier that exceeds \$200,000, which contributes to a wider salary distribution. This suggests that employment status alone does not fully explain the variation in salaries. Further analysis such as considering department or job level is necessary to understand the factors driving compensation disparities.
+
+## Annual Salary by Location
+
+```{r}
+ggplot(blizz_clean, aes(x = location, y = annual_salary)) +
+  geom_boxplot(fill = "coral") +
+  labs(title = "Annual Salary by Location",
+       x = "Location",
+       y = "Annual Salary") +
+  # fix formatting for labels
+  theme(axis.text.x = element_text(angle = 30))
+```
+
+The boxplot analysis of compensation across different office locations highlights significant variations. Irvine stands out with the highest median salary and the greatest range of pay, which includes several high-earning outliers that exceed the company-wide average. In contrast, locations such as Austin and Cork show more compressed salary distributions at lower overall pay levels. These findings suggest that geographic location is a significant factor in salary structure, likely reflecting the cost-of-living differences and the concentration of high-level or corporate-strategic roles at the company's headquarters compared to satellite or regional offices.
+
+## Distribution of Percent Salary Increases
+
+```{r}
+ggplot(blizz_clean, aes(x = percent_incr)) +
+  geom_histogram(bins = 20, col = "black", fill = "lightgreen") +
+  labs(title = "Distribution of Percent Salary Increases",
+       x = "Percent Increaase",
+       y = "Count")
+```
+
+The distribution of percent salary increases shows a significant right skew, with the majority of employees receiving raises in the 0% to 5% range. There is also a smaller, distinct cluster of increases around the 10% mark, which suggests a possible secondary pay adjustment strategy or a performance based tiering system. The overall concentration at the lower end of the spectrum provides further insight into the company's compensation dynamics, indicating that while most employees receive modest incremental raises, fewer individuals receive significant percentage-based increases.
+
+```{r}
+library(ggplot2)
+ggplot(blizz_clean, aes(x = performance_rating, y = annual_salary)) +
+  geom_jitter(width = 0.2, alpha = 0.5, color = "cadetblue") +
+  # mean per category
+  stat_summary(fun = mean, geom = "point", col = "black") +
+  labs(title = "Annual Salary by Performance Ratings",
+       x = "Performance Rating",
+       y = "Annual Salary") +
+  theme_minimal()
+```
+
+The jitter plot shows that while employees with 'Top' performance ratings maintain a competitive salary, there is significant overlap across all rating categories, including 'Successful' and 'Developing.' Notably, the mean salaries (represented by black dots) are relatively clustered together across all groups. This suggests that performance ratings are not a reliable predictor of annual salary at Blizzard Entertainment. Instead, it appears that other factors, such as tenure, department, or individual salary negotiations, may have a more significant impact on total compensation.
+
+## Annual Salary vs. Percentage Increase
+
+```{r}
+library(ggplot2)
+library(scales)
+library(splines)
+
+ggplot(blizz_clean, aes(x = annual_salary, y = percent_incr, color = status, fill = status)) +
+    geom_point(alpha = 0.4, size = 1.5) +
+  # Fit the natural spline. df = 3 allows the curve to flex up to 2 times
+  geom_smooth(method = "lm", formula = y ~ ns(x, df = 3), se = TRUE, linewidth = 1.2, alpha = 0.2) +
+  
+  # X-axis formatted as Salary (Dollars in Thousands)
+  scale_x_continuous(labels = label_dollar(scale = 1/1000, suffix = "K"), 
+                     expand = expansion(mult = c(0.1, 0.2))) +
+
+  # Y-axis formatted as Percentages
+  scale_y_continuous(labels = label_percent()) +
+  
+  scale_color_manual(values = c("Contractor" = "#FF9999", "Full Time Employee" = "#99CCFF")) +
+  scale_fill_manual(values = c("Contractor" = "#FF9999", "Full Time Employee" = "#99CCFF")) +
+  
+  labs(title = "Annual Salary vs. Percentage Increase",
+       subtitle = "Modeling non-linear trends between total salary and pay increases",
+       x = "Estimated Annual Salary",
+       y = "Percent Increase",
+       color = "Employment Status",
+       fill = "Employment Status") +
+  
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 16),
+        plot.subtitle = element_text(size = 11, color = "gray30"),
+        axis.title = element_text(size = 12, face = "bold"),
+        axis.text = element_text(size = 11),
+        legend.position = "bottom")
+```
+
+The trend lines modeled using natural splines reveal distinct compensation dynamics for contractors and full-time employees. For contractors (represented in red), the model shows an inverse relationship where lower base salaries are associated with significantly higher percentage increases, suggesting a rapid initial growth. Conversely, full-time employees (represented in blue) exhibit a more stable, slightly positive trend that levels off as base salary increases. This difference highlights that while contractors may experience more volatile percentage-based growth, full-time employees benefit from a more predictable, consistent compensation trajectory as their base salary scales.
+
+## K-means algorithm
+
+```{r}
+library(tidyverse)
+library(scales) # For formatting the plot axes
+
+clustering_data <- blizz_clean %>%
+  select(annual_salary, percent_incr) %>% 
+  drop_na()
+scaled_data <- scale(clustering_data)
+
+set.seed(123)
+kmeans_result <- kmeans(scaled_data, centers = 3, nstart = 25)
+
+clustering_data$cluster <- as.factor(kmeans_result$cluster)
+
+ggplot(clustering_data, aes(x = annual_salary, y = percent_incr, color = cluster)) +
+  geom_point(alpha = 0.7, size = 2.5) +
+  
+  scale_color_manual(values = c("1" = "steelblue", "2" = "darkorange", "3" = "forestgreen")) +
+  scale_x_continuous(labels = label_dollar(scale = 1/1000, suffix = "K")) +
+  scale_y_continuous(labels = label_dollar(scale = 1/1000, suffix = "K")) +
+  
+  labs(title = "Income Polarization at Blizzard",
+       subtitle = "Employees grouped into 3 tiers based on Annual Salary and Bonus",
+       x = "Annual Salary",
+       y = "Bonus Amount",
+       color = "Income Tier") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 16),
+        legend.position = "bottom")
+```
+
+To further investigate wage disparity, we utilized K-Means clustering to group employees into three distinct income tiers based on their salary and bonus structures. This analysis reveals a clear polarization within the company:
+
+Tier 1 (Blue): This tier consists of employees who have higher base salaries, but still maintain modest bonus structures. 
+
+Tier 2 (Orange): Represents a significant portion of the workforce with lower-to-mid annual salaries and minimal bonus incentives.
+
+Tier 3 (Green): Identifies a high-value tier characterized by substantially higher bonus potential, regardless of base salary.
+
+The clustering results indicate that compensation at Blizzard is not uniform; instead, it is stratifies with a small number of employees receiving substantially higher bonus rewards. This observation further exacerbates the financial divide between different staff levels. 
+
+## Statistical Profile of Income Tiers
+
+To quantify the differences between our income tiers, we calculated the average salary and percentage increases for each group:
+```{r}
+# Unmasking the cluster labels
+tier_summary <- clustering_data %>%
+  group_by(cluster) %>%
+  summarize(
+    avg_salary = mean(annual_salary),
+    avg_bonus = mean(percent_incr),
+    employee_count = n() 
+  ) %>%
+  arrange(avg_salary) 
+
+print(tier_summary)
+```
+The data shows that tier 3, which consists of the smallest group of 39 employees, experiences significantly higher percentage increases in compensation compared to the rest of the workforce. This makes tier 3 a clear outlier in terms of compensation growth. In contrast, tier 2, the largest segment of the workforce (209 employees), receives the lowest average base salaries and minimal percentage increases. This further reinforces our findings of structural income inequality.
+
+##Logistic Regression
+```{r}
+library(tidyverse)
+library(broom)
+library(scales)
+
+#  Define the living wage threshold in America
+living_wage_threshold <- 75000
+log_data <- blizz_clean %>%
+  #binarize target
+  mutate(is_vulnerable = ifelse(annual_salary < living_wage_threshold, 1, 0)) %>%
+  drop_na(is_vulnerable, percent_incr, status)
+
+vulnerability_model <- glm(is_vulnerable ~ percent_incr + status, 
+                           family = "binomial", 
+                           data = log_data)
+model_results <- tidy(vulnerability_model, exponentiate = TRUE, conf.int = TRUE) %>%
+  select(term, estimate, p.value)
+print(model_results)
+
+
+ggplot(log_data, aes(x = percent_incr, y = is_vulnerable, color = status, fill = status)) +
+ # Set height = 0 so the points stay perfectly flat on the 0% and 100% lines
+  stat_smooth(method = "glm", 
+              method.args = list(family = "binomial"), 
+              se = TRUE,          
+              linewidth = 1.2, 
+              alpha = 0.2) +      
+  
+  # Format axes
+  scale_y_continuous(labels = label_percent()) +
+  scale_color_manual(values = c("Contractor" = "#FF9999", "Full Time Employee" = "#99CCFF")) +
+  scale_fill_manual(values = c("Contractor" = "#FF9999", "Full Time Employee" = "#99CCFF")) +
+  
+  # Labels and Titles
+  labs(title = "Probability of Financial Vulnerability by Raise Size",
+       x = "Percentage Salary Increase",
+       y = "Probability of Financial Vulnerability",
+       color = "Employment Status",
+       fill = "Employment Status") +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", size = 16),
+        legend.position = "bottom")
+```
+This logistic regression model examines the probability of an employee being financially vulnerable (earning less than $75,000 annually) as a function of percentage salary increase and employment status. From the plot, the first thing we noticed was that the full time employees had higher percent salary increases (over 20%) compared to contractors (~8%). Interestingly, at a zero percent salary increase, full time employees have roughly a 60% probability of financial vulnerability while a contractor sits at roughly 35%. These two probabilities for the two types of employment are equal when percentage salary increases are at about 2%. After that, the financial vulnerability increases as percentage salary increases for contractors, ending at about 82% probability of financial vulnerability when percentage salary increase is at about 8%. On the other hand, as percentage salary increases for full time employees, the probability of financial vulnerability decreases until it is about 5% when percentage salary increase is about 21%.
+
+## Conclusion {.unnumbered}
+This investigation into Blizzard Entertainment’s compensation structure confirms that significant wage disparities exist across the organization. These disparities are driven by a combination of employment status, geographic location, and tiered bonus systems. Our analysis revealed a highly right-skewed salary distribution, where the typical employee's experience is vastly different from that of the high-earning outliers. Specifically, our K-Means clustering identified a clear "income polarization." A small, elite tier of employees (Tier 3) receives significantly higher percentage increases and bonuses compared to the majority of the workforce (Tier 2).
+
+Furthermore, our logistic regression model sheds light on financial vulnerability. While higher percentage raises effectively reduce  the likelihood of financial vulnerability for full-time employees, this does not apply to contractors, whose probability of earning below a living wage remains high even with modest raises. These findings indicate that current pay adjustment strategies may not be sufficient to bridge the gap for those at the lower end of the pay scale. Ultimately, this research emphasizes the need for greater transparency in compensation and targeted labor advocacy to ensure equitable pay practices across the gaming industry.
