@@ -1,12 +1,12 @@
 # Introduction {.unnumbered}
 
-In recent years, the technology and gaming industries have come under intense scrutiny regarding their internal corporate culture and compensation transparency. This project investigates the extent of wage disparity within Blizzard Entertainment, a major video game developer. Our analysis is prompted by a 2020 movement in which employees began anonymously sharing salary data to highlight perceived pay inequities across different departments and job levels. By analyzing this data, we aim to quantify how compensation varies within the company and identify potential financial vulnerabilities. This research is significant not only for Blizzard employees seeking equitable pay but also for industry regulators and labor advocates interested in corporate pay equity.
+In recent years, the technology and gaming industries have come under intense scrutiny regarding their internal corporate culture and compensation transparency. This project investigates the extent of wage disparity within Blizzard Entertainment, a major video game developer. My analysis is prompted by a 2020 movement in which employees began anonymously sharing salary data to highlight perceived pay inequities across different departments and job levels. By analyzing this data, I aim to quantify how compensation varies within the company and identify potential financial vulnerabilities. This research is significant not only for Blizzard employees seeking equitable pay but also for industry regulators and labor advocates interested in corporate pay equity.
 
 ## Dataset Description
-This analysis utilizes the 2020 Blizzard Entertainment Salary Dataset, which consists of over 400 anonymous entries provided by employees. The dataset includes variables such as current salary, job title, location, performance ratings, and percentage increases. These data are appropriate for our investigation as they provide an authentic perspective on internal compensation during a time of heightened labor advocacy. This enables us to identify pay disparities that are often hidden in official corporate reports.
+This analysis utilizes the 2020 Blizzard Entertainment Salary Dataset, which consists of over 400 anonymous entries provided by employees. The dataset includes variables such as current salary, job title, location, performance ratings, and percentage increases. These data are appropriate for my investigation as they provide an authentic perspective on internal compensation during a time of heightened labor advocacy. This enables me to identify pay disparities that are often hidden in official corporate reports.
 
 ## Preprocessing
-To prepare the data for analysis, we performed several cleaning steps. First, we converted salary strings into numeric values and filtered out invalid entries (e.g., salaries under $500). Additionally, we standardized compensation by converting hourly wages into estimated annual salaries based on a 40-hour work week. This approach ensures an "apples-to-apples" comparison across the entire workforce.
+To prepare the data for analysis, I performed several cleaning steps. First, I converted salary strings into numeric values and filtered out invalid entries (e.g., salaries under $500). Additionally, I standardized compensation by converting hourly wages into estimated annual salaries based on a 40-hour work week. This approach ensures an "apples-to-apples" comparison across the entire workforce.
 
 ```{r}
 library(tidyverse)
@@ -29,7 +29,7 @@ blizz_clean <- blizz_clean %>%
 ```
 
 ## Methods
-We used a variety of statistical methods to explore wage differences:
+I used a variety of statistical methods to explore wage differences:
 
 Exploratory Data Analysis (EDA): Creating histograms and boxplots to visualize distributions and identify outliers.
 
